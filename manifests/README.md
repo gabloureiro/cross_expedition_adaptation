@@ -1,0 +1,1 @@
+The placeholder tile identifiers below illustrate the manifest format and fold structure. Researchers with ISA dataset access who wish to reproduce the exact experimental splits should contact the corresponding author for the complete manifests.

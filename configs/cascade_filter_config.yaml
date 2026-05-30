@@ -1,0 +1,74 @@
+# ── Weighted Box Fusion (WBF) ─────────────────────────────────────────────────
+# Library: ensemble-boxes (pip install ensemble-boxes)
+# Reference: Solovyev et al., Neurocomputing 2021
+ 
+wbf:
+  iou_threshold: 0.50        # IoU threshold for box matching across models
+  conf_type: "max"           # Retain maximum confidence score across matching boxes
+                             # (not "avg" — averaging artificially deflates scores
+                             # when models have different confidence calibrations)
+  skip_box_thr: 0.0001       # Discard boxes below this confidence before fusion
+
+# ── Stage 1: Spatial Border Filter ───────────────────────────────────────────
+# Removes predictions whose bounding box edge is within min_border_dist pixels
+# of any tile boundary, eliminating tiling-induced fragmentation false positives.
+# Motivated by: Section 5.2 and Figure 4 of the paper.
+ 
+spatial_filter:
+  min_border_dist_px: 64     # Two-thirds of the 96-pixel tiling overlap region
+  tile_size_px: 640          # Input tile size (width = height)
+  
+# ── Stage 2: Confidence Filter ────────────────────────────────────────────────
+# Retains only high-confidence predictions to bypass the architecture-agnostic
+# interior false-positive floor.
+# Motivated by: Section 5.4 and Figure 5 of the paper.
+ 
+confidence_filter:
+  min_confidence: 0.90       # Selected at the TP-rate plateau in Figure 5,
+                             # consistent across all three teacher architectures
+                             
+# ── Stage 3: Multi-Model Ensemble Agreement ───────────────────────────────────
+# Retains only predictions supported by at least min_agreement of the 3 teachers,
+# using IoU >= agreement_iou to determine agreement.
+# Motivated by: Section 6.2 of the paper.
+ 
+ensemble_agreement:
+  min_models: 2              # Majority consensus (the only meaningful intermediate
+                             # value for a 3-model ensemble)
+  total_models: 3
+  agreement_iou: 0.50        # IoU threshold for counting a model as "agreeing"
+
+# ── Student Fine-Tuning ───────────────────────────────────────────────────────
+# Applied after pseudo-label generation. See Table 8 of the paper for full
+# hyperparameter list.
+ 
+student:
+  architecture: YOLOv8s
+  initialisation: frozen source domain checkpoint
+  optimizer: AdamW
+  lr0: 0.0001
+  lrf: 0.01
+  lr_schedule: cosine_decay
+  frozen_backbone_layers: 10
+  epochs: 100
+  early_stopping_patience: 20
+  batch_size: 16
+  imgsz: 640
+  single_class: true
+  
+# ── Teachers ──────────────────────────────────────────────────────────────────
+teachers:
+  - name: YOLOv8
+    framework: ultralytics
+    
+  - name: FasterRCNN
+    framework: mmdetection
+ 
+  - name: DINO
+    framework: mmdetection
+
+    
+  
+
+
+

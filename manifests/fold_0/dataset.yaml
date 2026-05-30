@@ -1,0 +1,6 @@
+path: ./fold_0/
+train: train_combined.txt
+val: val_labeled.txt
+nc: 1
+names:
+  - nodules_bbox
